@@ -1,0 +1,118 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "mysql"
+  url      = env("DATABASE_URL")
+}
+
+// Enum untuk konsistensi status
+enum Role {
+  ADMIN
+  PENGHUNI
+}
+
+enum RoomStatus {
+  TERSEDIA
+  TERISI
+  MAINTENANCE
+}
+
+enum PaymentStatus {
+  BELUM_BAYAR
+  MENUNGGU_VERIFIKASI
+  LUNAS
+  DITOLAK
+}
+
+enum ReportStatus {
+  BARU
+  DIPROSES
+  SELESAI
+}
+
+model User {
+  id        String   @id // Menggunakan Firebase UID
+  email     String   @unique
+  role      Role     @default(PENGHUNI)
+  nama      String
+  noHp      String?
+  createdAt DateTime @default(now())
+
+  // Relasi
+  penghuniData Penghuni?
+}
+
+model SystemConfig {
+  id         Int     @id @default(1)
+  namaKos    String  @default("Atlas Kos")
+  bankInfo   String  @default("BCA 123456789 a.n Atlas")
+  hargaDasar Decimal @default(500000)
+}
+
+model Kamar {
+  id           Int        @id @default(autoincrement())
+  nomorKamar   String     @unique
+  tipeKamar    String
+  hargaBulanan Decimal
+  status       RoomStatus @default(TERSEDIA)
+  fasilitas    String?
+
+  // Relasi
+  penghuni Penghuni?
+}
+
+model Penghuni {
+  id           Int      @id @default(autoincrement())
+  userId       String   @unique
+  kamarId      Int?     @unique
+  tanggalMasuk DateTime @default(now())
+  fotoKtp      String?
+
+  // Relasi
+  user    User      @relation(fields: [userId], references: [id])
+  kamar   Kamar?    @relation(fields: [kamarId], references: [id])
+  tagihan Tagihan[]
+  laporan Laporan[]
+}
+
+model Tagihan {
+  id         Int           @id @default(autoincrement())
+  penghuniId Int
+  periode    DateTime
+  jumlah     Decimal
+  status     PaymentStatus @default(BELUM_BAYAR)
+  createdAt  DateTime      @default(now())
+
+  // Relasi
+  penghuni   Penghuni    @relation(fields: [penghuniId], references: [id])
+  pembayaran Pembayaran?
+}
+
+model Pembayaran {
+  id           Int      @id @default(autoincrement())
+  tagihanId    Int      @unique
+  tanggalBayar DateTime @default(now())
+  buktiFoto    String
+  validasiOleh String?
+  alasanTolak  String?
+
+  tagihan Tagihan @relation(fields: [tagihanId], references: [id])
+}
+
+model Laporan {
+  id         Int          @id @default(autoincrement())
+  penghuniId Int
+  judul      String
+  deskripsi  String       @db.Text
+  foto       String?
+  status     ReportStatus @default(BARU)
+  createdAt  DateTime     @default(now())
+  updatedAt  DateTime     @updatedAt
+
+  penghuni Penghuni @relation(fields: [penghuniId], references: [id])
+}
