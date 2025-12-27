@@ -3,7 +3,7 @@ import { auth } from '../config/firebase';
 import prisma from '../config/prisma';
 import { AuthenticatedRequest } from '../types';
 
-// Verify Firebase Token
+// Verify Firebase Token or API Key (for n8n automation)
 export const verifyToken = async (req: AuthenticatedRequest, res: Response, next: NextFunction): Promise<void> => {
     try {
         const authHeader = req.headers.authorization;
@@ -18,6 +18,20 @@ export const verifyToken = async (req: AuthenticatedRequest, res: Response, next
             return;
         }
 
+        // Check if it's an API Key (for n8n automation)
+        const apiKey = process.env.N8N_API_KEY;
+        if (apiKey && token === apiKey) {
+            // API Key valid - treat as admin for automation
+            req.user = {
+                uid: 'n8n-automation',
+                email: 'automation@atlas-kos.my.id',
+                role: 'ADMIN',
+            };
+            next();
+            return;
+        }
+
+        // Otherwise verify as Firebase token
         const decodedToken = await auth.verifyIdToken(token);
 
         // Get user from database
