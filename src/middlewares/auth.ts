@@ -1,76 +1,78 @@
-import { Response, NextFunction, RequestHandler } from 'express';
-import { auth } from '../config/firebase';
-import prisma from '../config/prisma';
+import { Response, NextFunction } from 'express';
+import jwt from 'jsonwebtoken';
 import { AuthenticatedRequest } from '../types';
 
-// Verify Firebase Token or API Key (for n8n automation)
-export const verifyToken = async (req: AuthenticatedRequest, res: Response, next: NextFunction): Promise<void> => {
+const JWT_SECRET = process.env.JWT_SECRET || 'atlas-kos-secret-key-change-in-production';
+const N8N_API_KEY = process.env.N8N_API_KEY;
+
+export const verifyToken = async (
+    req: AuthenticatedRequest,
+    res: Response,
+    next: NextFunction
+) => {
     try {
         const authHeader = req.headers.authorization;
+
         if (!authHeader || !authHeader.startsWith('Bearer ')) {
-            res.status(401).json({ error: 'Token tidak ditemukan' });
-            return;
+            return res.status(401).json({ error: 'Token tidak ditemukan' });
         }
 
-        const token = authHeader.split('Bearer ')[1];
-        if (!token) {
-            res.status(401).json({ error: 'Token tidak valid' });
-            return;
-        }
+        const token = authHeader.split(' ')[1];
 
-        // Check if it's an API Key (for n8n automation)
-        const apiKey = process.env.N8N_API_KEY;
-        if (apiKey && token === apiKey) {
-            // API Key valid - treat as admin for automation
+        // Check if it's the N8N API key (for automation)
+        if (N8N_API_KEY && token === N8N_API_KEY) {
             req.user = {
                 uid: 'n8n-automation',
-                email: 'automation@atlas-kos.my.id',
-                role: 'ADMIN',
+                email: 'n8n@atlas-kos.my.id',
+                role: 'ADMIN'
             };
-            next();
-            return;
+            return next();
         }
 
-        // Otherwise verify as Firebase token
-        const decodedToken = await auth.verifyIdToken(token);
+        // Verify JWT token
+        try {
+            const decoded = jwt.verify(token, JWT_SECRET) as {
+                uid: string;
+                email: string;
+                role: string;
+            };
 
-        // Get user from database
-        const user = await prisma.user.findUnique({
-            where: { id: decodedToken.uid },
-        });
+            req.user = {
+                uid: decoded.uid,
+                email: decoded.email,
+                role: decoded.role
+            };
 
-        if (!user) {
-            res.status(401).json({ error: 'User tidak ditemukan di database' });
-            return;
+            return next();
+        } catch (jwtError) {
+            return res.status(401).json({ error: 'Token tidak valid atau sudah kadaluarsa' });
         }
-
-        req.user = {
-            uid: decodedToken.uid,
-            email: decodedToken.email || '',
-            role: user.role,
-        };
-
-        next();
     } catch (error) {
-        console.error('Auth error:', error);
-        res.status(401).json({ error: 'Token tidak valid' });
+        console.error('Auth middleware error:', error);
+        return res.status(500).json({ error: 'Internal server error' });
     }
 };
 
-// Require Admin Role
-export const requireAdmin = (req: AuthenticatedRequest, res: Response, next: NextFunction): void => {
-    if (!req.user || req.user.role !== 'ADMIN') {
-        res.status(403).json({ error: 'Akses ditolak. Hanya Admin yang diizinkan.' });
-        return;
+// Middleware to check if user is admin
+export const requireAdmin = (
+    req: AuthenticatedRequest,
+    res: Response,
+    next: NextFunction
+) => {
+    if (req.user?.role !== 'ADMIN') {
+        return res.status(403).json({ error: 'Akses ditolak. Hanya admin yang diizinkan.' });
     }
-    next();
+    return next();
 };
 
-// Require Penghuni Role
-export const requirePenghuni = (req: AuthenticatedRequest, res: Response, next: NextFunction): void => {
-    if (!req.user || req.user.role !== 'PENGHUNI') {
-        res.status(403).json({ error: 'Akses ditolak. Hanya Penghuni yang diizinkan.' });
-        return;
+// Middleware to check if user is penghuni (tenant)
+export const requirePenghuni = (
+    req: AuthenticatedRequest,
+    res: Response,
+    next: NextFunction
+) => {
+    if (req.user?.role !== 'PENGHUNI' && req.user?.role !== 'ADMIN') {
+        return res.status(403).json({ error: 'Akses ditolak.' });
     }
-    next();
+    return next();
 };

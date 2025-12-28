@@ -4,10 +4,11 @@ import { verifyToken } from '../middlewares/auth';
 
 const router = Router();
 
-// Public routes (still need token for Firebase UID)
-router.post('/sync', verifyToken, AuthController.syncUser);
+// Public routes (no auth required)
+router.post('/register', AuthController.register);
+router.post('/login', AuthController.login);
 
-// Protected routes
+// Protected routes (require JWT token)
 router.get('/profile', verifyToken, AuthController.getProfile);
 router.put('/profile', verifyToken, AuthController.updateProfile);
 

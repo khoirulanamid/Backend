@@ -4,72 +4,59 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
 };
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.requirePenghuni = exports.requireAdmin = exports.verifyToken = void 0;
-const firebase_1 = require("../config/firebase");
-const prisma_1 = __importDefault(require("../config/prisma"));
-// Verify Firebase Token or API Key (for n8n automation)
+const jsonwebtoken_1 = __importDefault(require("jsonwebtoken"));
+const JWT_SECRET = process.env.JWT_SECRET || 'atlas-kos-secret-key-change-in-production';
+const N8N_API_KEY = process.env.N8N_API_KEY;
 const verifyToken = async (req, res, next) => {
     try {
         const authHeader = req.headers.authorization;
         if (!authHeader || !authHeader.startsWith('Bearer ')) {
-            res.status(401).json({ error: 'Token tidak ditemukan' });
-            return;
+            return res.status(401).json({ error: 'Token tidak ditemukan' });
         }
-        const token = authHeader.split('Bearer ')[1];
-        if (!token) {
-            res.status(401).json({ error: 'Token tidak valid' });
-            return;
-        }
-        // Check if it's an API Key (for n8n automation)
-        const apiKey = process.env.N8N_API_KEY;
-        if (apiKey && token === apiKey) {
-            // API Key valid - treat as admin for automation
+        const token = authHeader.split(' ')[1];
+        // Check if it's the N8N API key (for automation)
+        if (N8N_API_KEY && token === N8N_API_KEY) {
             req.user = {
                 uid: 'n8n-automation',
-                email: 'automation@atlas-kos.my.id',
-                role: 'ADMIN',
+                email: 'n8n@atlas-kos.my.id',
+                role: 'ADMIN'
             };
-            next();
-            return;
+            return next();
         }
-        // Otherwise verify as Firebase token
-        const decodedToken = await firebase_1.auth.verifyIdToken(token);
-        // Get user from database
-        const user = await prisma_1.default.user.findUnique({
-            where: { id: decodedToken.uid },
-        });
-        if (!user) {
-            res.status(401).json({ error: 'User tidak ditemukan di database' });
-            return;
+        // Verify JWT token
+        try {
+            const decoded = jsonwebtoken_1.default.verify(token, JWT_SECRET);
+            req.user = {
+                uid: decoded.uid,
+                email: decoded.email,
+                role: decoded.role
+            };
+            return next();
         }
-        req.user = {
-            uid: decodedToken.uid,
-            email: decodedToken.email || '',
-            role: user.role,
-        };
-        next();
+        catch (jwtError) {
+            return res.status(401).json({ error: 'Token tidak valid atau sudah kadaluarsa' });
+        }
     }
     catch (error) {
-        console.error('Auth error:', error);
-        res.status(401).json({ error: 'Token tidak valid' });
+        console.error('Auth middleware error:', error);
+        return res.status(500).json({ error: 'Internal server error' });
     }
 };
 exports.verifyToken = verifyToken;
-// Require Admin Role
+// Middleware to check if user is admin
 const requireAdmin = (req, res, next) => {
-    if (!req.user || req.user.role !== 'ADMIN') {
-        res.status(403).json({ error: 'Akses ditolak. Hanya Admin yang diizinkan.' });
-        return;
+    if (req.user?.role !== 'ADMIN') {
+        return res.status(403).json({ error: 'Akses ditolak. Hanya admin yang diizinkan.' });
     }
-    next();
+    return next();
 };
 exports.requireAdmin = requireAdmin;
-// Require Penghuni Role
+// Middleware to check if user is penghuni (tenant)
 const requirePenghuni = (req, res, next) => {
-    if (!req.user || req.user.role !== 'PENGHUNI') {
-        res.status(403).json({ error: 'Akses ditolak. Hanya Penghuni yang diizinkan.' });
-        return;
+    if (req.user?.role !== 'PENGHUNI' && req.user?.role !== 'ADMIN') {
+        return res.status(403).json({ error: 'Akses ditolak.' });
     }
-    next();
+    return next();
 };
 exports.requirePenghuni = requirePenghuni;
 //# sourceMappingURL=auth.js.map
