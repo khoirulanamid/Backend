@@ -24,17 +24,19 @@
         {
             "parameters": {
                 "method": "GET",
-                "url": "={{ $env.BACKEND_URL }}/api/admin/tagihan/overdue",
+                "url": "https://api.atlas-kos.my.id/api/admin/tagihan/overdue",
                 "sendHeaders": true,
                 "headerParameters": {
                     "parameters": [
                         {
                             "name": "Authorization",
-                            "value": "Bearer {{ $env.ADMIN_TOKEN }}"
+                            "value": "Bearer e6395264afddde57f7b98763e2c7bce78796a0949ebef31a1a6af9ef6ce6d480"
                         }
                     ]
                 },
-                "options": {}
+                "options": {
+                    "allowUnauthorizedCerts": true
+                }
             },
             "id": "get-overdue",
             "name": "Get Overdue Bills",
@@ -161,7 +163,7 @@
                     "parameters": [
                         {
                             "name": "Authorization",
-                            "value": "={{ $env.FONNTE_API_KEY }}"
+                            "value": "PxYELzAhgoyp2Lbdseea"
                         }
                     ]
                 },
@@ -188,7 +190,7 @@
                     "parameters": [
                         {
                             "name": "Authorization",
-                            "value": "={{ $env.FONNTE_API_KEY }}"
+                            "value": "PxYELzAhgoyp2Lbdseea"
                         }
                     ]
                 },

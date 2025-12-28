@@ -24,17 +24,19 @@
         {
             "parameters": {
                 "method": "GET",
-                "url": "={{ $env.BACKEND_URL }}/api/kamar",
+                "url": "https://api.atlas-kos.my.id/api/kamar",
                 "sendHeaders": true,
                 "headerParameters": {
                     "parameters": [
                         {
                             "name": "Authorization",
-                            "value": "Bearer {{ $env.ADMIN_TOKEN }}"
+                            "value": "Bearer e6395264afddde57f7b98763e2c7bce78796a0949ebef31a1a6af9ef6ce6d480"
                         }
                     ]
                 },
-                "options": {}
+                "options": {
+                    "allowUnauthorizedCerts": true
+                }
             },
             "id": "get-occupied-rooms",
             "name": "Get Occupied Rooms",
@@ -94,20 +96,22 @@
         {
             "parameters": {
                 "method": "POST",
-                "url": "={{ $env.BACKEND_URL }}/api/admin/tagihan/generate",
+                "url": "https://api.atlas-kos.my.id/api/admin/tagihan/generate",
                 "sendHeaders": true,
                 "headerParameters": {
                     "parameters": [
                         {
                             "name": "Authorization",
-                            "value": "Bearer {{ $env.ADMIN_TOKEN }}"
+                            "value": "Bearer e6395264afddde57f7b98763e2c7bce78796a0949ebef31a1a6af9ef6ce6d480"
                         }
                     ]
                 },
                 "sendBody": true,
                 "specifyBody": "json",
                 "jsonBody": "={\n  \"penghuniId\": {{ $json.penghuni.id }},\n  \"jumlah\": {{ $json.hargaBulanan }},\n  \"periode\": \"{{ $now.format('yyyy-MM-01') }}\"\n}",
-                "options": {}
+                "options": {
+                    "allowUnauthorizedCerts": true
+                }
             },
             "id": "create-bill",
             "name": "Create Bill",
@@ -127,7 +131,7 @@
                     "parameters": [
                         {
                             "name": "Authorization",
-                            "value": "={{ $env.FONNTE_API_KEY }}"
+                            "value": "PxYELzAhgoyp2Lbdseea"
                         }
                     ]
                 },
