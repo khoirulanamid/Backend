@@ -1,0 +1,292 @@
+{
+  "name": "Atlas Kos - Monthly Bill Generator",
+  "nodes": [
+    {
+      "parameters": {
+        "rule": {
+          "interval": [
+            {
+              "field": "cronExpression",
+              "expression": "0 0 1 * *"
+            }
+          ]
+        }
+      },
+      "id": "fc6e967e-7057-4639-96d8-c8b0c476c863",
+      "name": "Schedule (1st of Month)",
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.2,
+      "position": [
+        0,
+        0
+      ]
+    },
+    {
+      "parameters": {
+        "url": "https://api.atlas-kos.my.id/api/kamar",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Authorization",
+              "value": "Bearer e6395264afddde57f7b98763e2c7bce78796a0949ebef31a1a6af9ef6ce6d480"
+            }
+          ]
+        },
+        "options": {
+          "allowUnauthorizedCerts": true
+        }
+      },
+      "id": "c7173829-fbaf-4d1f-a4db-45426ad249ec",
+      "name": "Get Occupied Rooms",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        224,
+        0
+      ]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 1
+          },
+          "conditions": [
+            {
+              "id": "has-tenant",
+              "leftValue": "={{ $json.penghuni }}",
+              "rightValue": "",
+              "operator": {
+                "type": "object",
+                "operation": "notEmpty"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "id": "e9779577-423d-4859-9496-4a10ae752118",
+      "name": "Filter Occupied Rooms",
+      "type": "n8n-nodes-base.filter",
+      "typeVersion": 2,
+      "position": [
+        448,
+        0
+      ]
+    },
+    {
+      "parameters": {
+        "fieldToSplitOut": "kamar",
+        "options": {}
+      },
+      "id": "77c1c3e1-17f8-494b-bbe9-155d0b9d465e",
+      "name": "Split Rooms",
+      "type": "n8n-nodes-base.splitOut",
+      "typeVersion": 1,
+      "position": [
+        672,
+        0
+      ]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://api.atlas-kos.my.id/api/admin/tagihan/generate",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Authorization",
+              "value": "Bearer e6395264afddde57f7b98763e2c7bce78796a0949ebef31a1a6af9ef6ce6d480"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\n  \"penghuniId\": {{ $json.penghuni.id }},\n  \"jumlah\": {{ $json.hargaBulanan }},\n  \"periode\": \"{{ $now.format('yyyy-MM-01') }}\"\n}",
+        "options": {
+          "allowUnauthorizedCerts": true
+        }
+      },
+      "id": "98325451-51b6-4d4c-af8f-87505c0f33c8",
+      "name": "Create Bill",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        880,
+        0
+      ]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://api.fonnte.com/send",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Authorization",
+              "value": "PxYELzAhgoyp2Lbdseea"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\n  \"target\": \"{{ $json.penghuni.noHp }}\",\n  \"message\": \"📋 *Tagihan Baru*\\n\\nHalo {{ $json.penghuni.nama }},\\n\\nTagihan bulan {{ $now.format('MMMM yyyy') }} telah tersedia:\\n\\n💰 Jumlah: Rp {{ $json.hargaBulanan.toLocaleString('id-ID') }}\\n🏠 Kamar: {{ $json.nomorKamar }}\\n\\nSilakan lakukan pembayaran sebelum tanggal 10.\\n\\n_Atlas Kos Management_\",\n  \"countryCode\": \"62\"\n}",
+        "options": {}
+      },
+      "id": "9ab2f3ab-fd4b-428f-bc3c-c8f2cd54365a",
+      "name": "Send Bill Reminder",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        1104,
+        0
+      ]
+    },
+    {
+      "parameters": {
+        "fieldsToAggregate": {
+          "fieldToAggregate": [
+            {}
+          ]
+        },
+        "options": {}
+      },
+      "id": "17a50a9f-24d7-4bb2-a850-48663f607904",
+      "name": "Aggregate Results",
+      "type": "n8n-nodes-base.aggregate",
+      "typeVersion": 1,
+      "position": [
+        1328,
+        0
+      ]
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "summary",
+              "name": "summary",
+              "value": "=Generated {{ $json.length }} bills for {{ $now.format('MMMM yyyy') }}",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "5fbe3152-e91e-46b0-b3f8-1e792850b681",
+      "name": "Create Summary",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        1552,
+        0
+      ]
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "Schedule (1st of Month)": {
+      "main": [
+        [
+          {
+            "node": "Get Occupied Rooms",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Get Occupied Rooms": {
+      "main": [
+        [
+          {
+            "node": "Filter Occupied Rooms",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Filter Occupied Rooms": {
+      "main": [
+        [
+          {
+            "node": "Split Rooms",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Split Rooms": {
+      "main": [
+        [
+          {
+            "node": "Create Bill",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Create Bill": {
+      "main": [
+        [
+          {
+            "node": "Send Bill Reminder",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Send Bill Reminder": {
+      "main": [
+        [
+          {
+            "node": "Aggregate Results",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Aggregate Results": {
+      "main": [
+        [
+          {
+            "node": "Create Summary",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1",
+    "availableInMCP": false
+  },
+  "versionId": "ea8c3ddc-535b-4a0d-a842-582d3765b5de",
+  "meta": {
+    "instanceId": "9dbd38fa7746dc49e4c8ab4588d8a73de0837e863b623225d0d252f7cac3cb12"
+  },
+  "id": "dpgrAyacYPitgsbw",
+  "tags": [
+    {
+      "updatedAt": "2025-12-26T17:27:55.222Z",
+      "createdAt": "2025-12-26T17:27:55.222Z",
+      "id": "vcL7YDE7JWsWRIKQ",
+      "name": "Atlas Kos"
+    }
+  ]
+}

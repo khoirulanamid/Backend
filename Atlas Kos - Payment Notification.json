@@ -1,0 +1,344 @@
+{
+  "name": "Atlas Kos - Payment Notification",
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "payment-notification",
+        "responseMode": "responseNode",
+        "options": {}
+      },
+      "id": "b2f6cef1-871f-4aed-be78-8e464de03b62",
+      "name": "Webhook Trigger",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2,
+      "position": [
+        -448,
+        112
+      ],
+      "webhookId": "payment-notification"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 1
+          },
+          "conditions": [
+            {
+              "id": "condition-lunas",
+              "leftValue": "={{ $json.status }}",
+              "rightValue": "LUNAS",
+              "operator": {
+                "type": "string",
+                "operation": "equals"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "id": "0bf85c71-6def-4e30-841d-ee8ec25838c1",
+      "name": "Check Status",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2,
+      "position": [
+        -224,
+        112
+      ]
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "phone",
+              "name": "phone",
+              "value": "={{ $json.noHp.startsWith('0') ? '62' + $json.noHp.substring(1) : $json.noHp }}",
+              "type": "string"
+            },
+            {
+              "id": "message",
+              "name": "message",
+              "value": "✅ *Pembayaran Dikonfirmasi*\n\n{{ $json.message }}\n\nTerima kasih telah melakukan pembayaran tepat waktu.\n\n_Atlas Kos Management_",
+              "type": "string"
+            },
+            {
+              "id": "status",
+              "name": "status",
+              "value": "={{ $json.status }}",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "6a24f4c9-7914-45ef-8058-ebf3663472c9",
+      "name": "Format Message (Lunas)",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        0,
+        0
+      ]
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "phone",
+              "name": "phone",
+              "value": "={{ $json.noHp.startsWith('0') ? '62' + $json.noHp.substring(1) : $json.noHp }}",
+              "type": "string"
+            },
+            {
+              "id": "message",
+              "name": "message",
+              "value": "❌ *Pembayaran Ditolak*\n\n{{ $json.message }}\n\nSilakan upload ulang bukti pembayaran yang valid.\n\n_Atlas Kos Management_",
+              "type": "string"
+            },
+            {
+              "id": "status",
+              "name": "status",
+              "value": "={{ $json.status }}",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "f54050ee-0104-4f5a-94f7-20882299f1c1",
+      "name": "Format Message (Ditolak)",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        0,
+        208
+      ]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://api.fonnte.com/send",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Authorization",
+              "value": "=PxYELzAhgoyp2Lbdseea"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\n  \"target\": \"{{ $json.phone }}\",\n  \"message\": \"{{ $json.message }}\",\n  \"countryCode\": \"62\"\n}",
+        "options": {}
+      },
+      "id": "ad3317be-1513-4e9b-ac7e-de88d6d6b44c",
+      "name": "Send WhatsApp (Lunas)",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        224,
+        0
+      ]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://api.fonnte.com/send",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Authorization",
+              "value": "=PxYELzAhgoyp2Lbdseea"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\n  \"target\": \"{{ $json.phone }}\",\n  \"message\": \"{{ $json.message }}\",\n  \"countryCode\": \"62\"\n}",
+        "options": {}
+      },
+      "id": "c58132dc-4b93-4e61-8ee2-ed016109246e",
+      "name": "Send WhatsApp (Ditolak)",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        224,
+        208
+      ]
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={\n  \"success\": true,\n  \"message\": \"Notification sent\",\n  \"status\": \"{{ $json.status }}\"\n}",
+        "options": {}
+      },
+      "id": "47ac32a3-71b4-4018-ace8-d7cb693ac806",
+      "name": "Response Success",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.1,
+      "position": [
+        448,
+        112
+      ]
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={\n  \"success\": false,\n  \"error\": \"{{ $json.error }}\"\n}",
+        "options": {
+          "responseCode": 500
+        }
+      },
+      "id": "428df551-bce1-4541-91b8-d3627f0cc63a",
+      "name": "Response Error",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.1,
+      "position": [
+        560,
+        272
+      ]
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "error",
+              "name": "error",
+              "value": "={{ $json.message || 'Unknown error occurred' }}",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "246745fb-344c-4d16-b16c-a55900ce6431",
+      "name": "Handle Error",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        416,
+        272
+      ]
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "Webhook Trigger": {
+      "main": [
+        [
+          {
+            "node": "Check Status",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Check Status": {
+      "main": [
+        [
+          {
+            "node": "Format Message (Lunas)",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Format Message (Ditolak)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Format Message (Lunas)": {
+      "main": [
+        [
+          {
+            "node": "Send WhatsApp (Lunas)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Format Message (Ditolak)": {
+      "main": [
+        [
+          {
+            "node": "Send WhatsApp (Ditolak)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Send WhatsApp (Lunas)": {
+      "main": [
+        [
+          {
+            "node": "Response Success",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Send WhatsApp (Ditolak)": {
+      "main": [
+        [
+          {
+            "node": "Response Success",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Handle Error",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Handle Error": {
+      "main": [
+        [
+          {
+            "node": "Response Error",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": true,
+  "settings": {
+    "executionOrder": "v1",
+    "availableInMCP": false
+  },
+  "versionId": "c9ababd3-a967-44c3-855d-2999f6c27c73",
+  "meta": {
+    "instanceId": "9dbd38fa7746dc49e4c8ab4588d8a73de0837e863b623225d0d252f7cac3cb12"
+  },
+  "id": "lqUnVPQH9wqjwTkF",
+  "tags": [
+    {
+      "updatedAt": "2025-12-26T17:27:55.222Z",
+      "createdAt": "2025-12-26T17:27:55.222Z",
+      "id": "vcL7YDE7JWsWRIKQ",
+      "name": "Atlas Kos"
+    }
+  ]
+}

@@ -1,0 +1,325 @@
+{
+  "name": "Atlas Kos - Overdue Payment Reminder",
+  "nodes": [
+    {
+      "parameters": {
+        "rule": {
+          "interval": [
+            {
+              "field": "cronExpression",
+              "expression": "0 9 * * *"
+            }
+          ]
+        }
+      },
+      "id": "f4eda0bb-12ed-464b-8c32-97ca53ae08e1",
+      "name": "Daily Check (9 AM)",
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.2,
+      "position": [
+        -1328,
+        208
+      ]
+    },
+    {
+      "parameters": {
+        "url": "https://api.atlas-kos.my.id/api/admin/tagihan/overdue",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Authorization",
+              "value": "Bearer e6395264afddde57f7b98763e2c7bce78796a0949ebef31a1a6af9ef6ce6d480"
+            }
+          ]
+        },
+        "options": {
+          "allowUnauthorizedCerts": true
+        }
+      },
+      "id": "f7bee610-772a-4ba6-945d-9aa8d22cd916",
+      "name": "Get Overdue Bills",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        -1104,
+        208
+      ]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 1
+          },
+          "conditions": [
+            {
+              "id": "has-overdue",
+              "leftValue": "={{ $json.tagihan.length }}",
+              "rightValue": 0,
+              "operator": {
+                "type": "number",
+                "operation": "gt"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "id": "d51e5f91-f995-40b1-a912-274de6cdf560",
+      "name": "Has Overdue Bills?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2,
+      "position": [
+        -880,
+        208
+      ]
+    },
+    {
+      "parameters": {
+        "fieldToSplitOut": "tagihan",
+        "options": {}
+      },
+      "id": "0326a662-15c6-43e5-b74c-5590688f7bce",
+      "name": "Split Bills",
+      "type": "n8n-nodes-base.splitOut",
+      "typeVersion": 1,
+      "position": [
+        -656,
+        112
+      ]
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "days-overdue",
+              "name": "daysOverdue",
+              "value": "={{ Math.floor((new Date() - new Date($json.periode)) / (1000 * 60 * 60 * 24)) }}",
+              "type": "number"
+            },
+            {
+              "id": "reminder-level",
+              "name": "reminderLevel",
+              "value": "={{ $json.daysOverdue > 30 ? 'URGENT' : ($json.daysOverdue > 14 ? 'WARNING' : 'REMINDER') }}",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "cde3db6a-8d56-4b3a-a122-952a38928085",
+      "name": "Calculate Overdue Days",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        -448,
+        112
+      ]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 1
+          },
+          "conditions": [
+            {
+              "id": "is-urgent",
+              "leftValue": "={{ $json.reminderLevel }}",
+              "rightValue": "URGENT",
+              "operator": {
+                "type": "string",
+                "operation": "equals"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "id": "4e5714af-cf6b-422e-959a-3d844ae49d4b",
+      "name": "Check Urgency Level",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2,
+      "position": [
+        -224,
+        112
+      ]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://api.fonnte.com/send",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Authorization",
+              "value": "PxYELzAhgoyp2Lbdseea"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\n  \"target\": \"{{ $json.penghuni.noHp }}\",\n  \"message\": \"🚨 *TAGIHAN MENDESAK*\\n\\nYth. {{ $json.penghuni.nama }},\\n\\nTagihan Anda sudah terlambat {{ $json.daysOverdue }} hari!\\n\\n💰 Jumlah: Rp {{ $json.jumlah.toLocaleString('id-ID') }}\\n🏠 Kamar: {{ $json.kamar }}\\n📅 Periode: {{ $json.periode }}\\n\\n⚠️ Harap segera lunasi untuk menghindari tindakan lebih lanjut.\\n\\n_Atlas Kos Management_\",\n  \"countryCode\": \"62\"\n}",
+        "options": {}
+      },
+      "id": "6f6380f6-65c1-4505-837e-8a8264917a9b",
+      "name": "Send Urgent Reminder",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        0,
+        0
+      ]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://api.fonnte.com/send",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Authorization",
+              "value": "PxYELzAhgoyp2Lbdseea"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\n  \"target\": \"{{ $json.penghuni.noHp }}\",\n  \"message\": \"📢 *Pengingat Pembayaran*\\n\\nHalo {{ $json.penghuni.nama }},\\n\\nTagihan Anda sudah melewati jatuh tempo ({{ $json.daysOverdue }} hari).\\n\\n💰 Jumlah: Rp {{ $json.jumlah.toLocaleString('id-ID') }}\\n🏠 Kamar: {{ $json.kamar }}\\n\\nMohon segera lakukan pembayaran.\\n\\n_Atlas Kos Management_\",\n  \"countryCode\": \"62\"\n}",
+        "options": {}
+      },
+      "id": "70b14d6c-2f2e-4c7a-9bdb-d49173d19e97",
+      "name": "Send Normal Reminder",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        0,
+        208
+      ]
+    },
+    {
+      "parameters": {},
+      "id": "db373c4a-4e97-489c-aa68-ca04aff605ee",
+      "name": "No Overdue Bills",
+      "type": "n8n-nodes-base.noOp",
+      "typeVersion": 1,
+      "position": [
+        -656,
+        304
+      ]
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "Daily Check (9 AM)": {
+      "main": [
+        [
+          {
+            "node": "Get Overdue Bills",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Get Overdue Bills": {
+      "main": [
+        [
+          {
+            "node": "Has Overdue Bills?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Has Overdue Bills?": {
+      "main": [
+        [
+          {
+            "node": "Split Bills",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "No Overdue Bills",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Split Bills": {
+      "main": [
+        [
+          {
+            "node": "Calculate Overdue Days",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Calculate Overdue Days": {
+      "main": [
+        [
+          {
+            "node": "Check Urgency Level",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Check Urgency Level": {
+      "main": [
+        [
+          {
+            "node": "Send Urgent Reminder",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Send Normal Reminder",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1",
+    "availableInMCP": false
+  },
+  "versionId": "6423bda3-c1e9-4883-ad02-5d5b9cc0d6b6",
+  "meta": {
+    "instanceId": "9dbd38fa7746dc49e4c8ab4588d8a73de0837e863b623225d0d252f7cac3cb12"
+  },
+  "id": "w1l4sDjCU4MMPHlC",
+  "tags": [
+    {
+      "updatedAt": "2025-12-26T17:27:55.222Z",
+      "createdAt": "2025-12-26T17:27:55.222Z",
+      "id": "vcL7YDE7JWsWRIKQ",
+      "name": "Atlas Kos"
+    }
+  ]
+}

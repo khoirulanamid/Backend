@@ -76,8 +76,8 @@ model Penghuni {
   fotoKtp      String?
 
   // Relasi
-  user    User      @relation(fields: [userId], references: [id])
-  kamar   Kamar?    @relation(fields: [kamarId], references: [id])
+  user    User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  kamar   Kamar?    @relation(fields: [kamarId], references: [id], onDelete: SetNull)
   tagihan Tagihan[]
   laporan Laporan[]
 }
@@ -91,7 +91,7 @@ model Tagihan {
   createdAt  DateTime      @default(now())
 
   // Relasi
-  penghuni   Penghuni    @relation(fields: [penghuniId], references: [id])
+  penghuni   Penghuni    @relation(fields: [penghuniId], references: [id], onDelete: Cascade)
   pembayaran Pembayaran?
 }
 
@@ -103,7 +103,7 @@ model Pembayaran {
   validasiOleh String?
   alasanTolak  String?
 
-  tagihan Tagihan @relation(fields: [tagihanId], references: [id])
+  tagihan Tagihan @relation(fields: [tagihanId], references: [id], onDelete: Cascade)
 }
 
 model Laporan {
@@ -116,5 +116,5 @@ model Laporan {
   createdAt  DateTime     @default(now())
   updatedAt  DateTime     @updatedAt
 
-  penghuni Penghuni @relation(fields: [penghuniId], references: [id])
+  penghuni Penghuni @relation(fields: [penghuniId], references: [id], onDelete: Cascade)
 }
